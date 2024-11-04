@@ -31,6 +31,8 @@ class PaiNN(nn.Module):
         """
         super().__init__()
         raise NotImplementedError
+    def message_passiing(self):
+        pass
 
 
     def forward(

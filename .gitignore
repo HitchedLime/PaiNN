@@ -3,6 +3,15 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+
+
+# Our data 
+*.pt
+*.sdf
+*.csv
+
+data/procceset
+data/raw
 # C extensions
 *.so
 
