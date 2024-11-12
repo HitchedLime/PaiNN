@@ -84,6 +84,27 @@ class Update(nn.Module):
     def forward(self,node_s,node_vec):
         Uv= self.U_dot(node_vec)
         Vv =self.V_dot(node_s) 
+        Vv_norm = torch.linalg(Vv,dim= 1)
+
+
+        mlp_input = torch.cat((Vv_norm, node_s), dim=1)
+        mlp_output = self.update_mlp(mlp_input)
+
+
+        a_vv, a_sv, a_ss = torch.split(
+            mlp_output,                                        
+            node_vec.shape[-1],      # split it threaa wayws                                   
+            dim = 1,
+        )
+        
+        delta_v = a_vv.unsqueeze(1) * Uv
+        #not sure about this one 
+        dot_prod = torch.sum(Uv * Vv, dim=1)
+        delta_s = a_sv * dot_prod + a_ss
+        
+        return node_s + delta_s, node_vec + delta_v
+
+
 class Pain(nn.Module):
 
     def __init__(
