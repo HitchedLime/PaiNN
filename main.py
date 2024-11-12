@@ -2,7 +2,7 @@ import torch
 
 from utils.PostProcessing import AtomwisePostProcessing
 from utils.parameters import cli
-from network.PaiNN import PaiNN
+from network.PaiNN import Pain
 from QM9DataModule.QM9 import *
 from pytorch_lightning import seed_everything
 from tqdm import trange
@@ -30,7 +30,7 @@ y_mean, y_std, atom_refs = dm.get_target_stats(
     remove_atom_refs=True, divide_by_atoms=True
 )
 
-painn = PaiNN(
+painn = Pain(
     num_message_passing_layers=args.num_message_passing_layers,
     num_features=args.num_features,
     num_outputs=args.num_outputs, 
@@ -58,14 +58,15 @@ for epoch in pbar:
     loss_epoch = 0.
     for batch in dm.train_dataloader():
         batch = batch.to(device)
-        print(f"This is z {batch.z}")
-        print(f"This is pos {batch.pos}")
-        print(f"This is batch {batch.batch}")
-        atomic_contributions = painn(
-            atoms=batch.z,
-            atom_positions=batch.pos,
-            graph_indexes=batch.batch
-        )
+        # print(f"This is z {batch.z}")
+        # print(f"This is pos {batch.pos}")
+        # print(f"This is batch {batch.batch}")
+        atomic_contributions =painn(batch)
+        # atomic_contributions = painn(
+        #     atoms=batch.z,
+        #     atom_positions=batch.pos,
+        #     graph_indexes=batch.batch
+        # )
         preds = post_processing(
             atoms=batch.z,
             graph_indexes=batch.batch,
