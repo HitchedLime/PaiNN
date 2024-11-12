@@ -1,13 +1,11 @@
-import torch 
-
-from utils.PostProcessing import AtomwisePostProcessing
-from utils.parameters import cli
-from network.PaiNN import Pain
-from QM9DataModule.QM9 import *
+import torch.nn.functional as F
 from pytorch_lightning import seed_everything
 from tqdm import trange
-import torch.nn.functional as F
 
+from QM9DataModule.QM9 import *
+from network.PaiNN import Pain
+from utils.PostProcessing import AtomwisePostProcessing
+from utils.parameters import cli
 
 args = [] # Specify non-default arguments in this list
 args = cli(args)
