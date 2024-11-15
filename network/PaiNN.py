@@ -2,14 +2,23 @@ import torch
 import torch.nn as nn
 
 
+# def cos_cut(distances, cutoff):
+    
+#     mask = (distances < cutoff).float()  # Only values within cutoff contribute 
+#     cutoff_values = 0.5 * (torch.cos(distances * (torch.pi / cutoff)) + 1.0)
+#     return cutoff_values * mask
+
+
+
 # look into paper for formula 
 def cos_cut(edge_dis,cutoff):
-    return torch.where(edge_dis<=cutoff,0.5*(torch.cos(edge_dis/cutoff)+1)
+    return torch.where(edge_dis<=cutoff,0.5*(torch.cos(torch.pi*edge_dis/cutoff)+1)
                        ,torch.tensor(0.0,dtype=edge_dis.dtype))
 #look for paper for formula 
 def rbf(edge_dis,num_rbf_features,cutoff):
 
     n= torch.arange(num_rbf_features,device = edge_dis.device)+1
+    
     inner_part =(n*torch.pi/cutoff)*edge_dis.unsqueeze(-1)
     return torch.sin(inner_part)/edge_dis.unsqueeze(-1)
 
@@ -30,13 +39,14 @@ class Message(nn.Module):
     def forward(self,node_s,node_vec,edge,edge_difference,edge_dis):
         #filter  its marked as W in the paper 
         filter_W =self.filter(rbf(edge_dis,self.edge_size,self.cutoff))
-        filter_W  =filter_W *  cos_cut(edge_dis,self.cutoff).unsqueeze(-1)
+        cos_cut_var =  cos_cut(edge_dis,self.cutoff).unsqueeze(-1)
+        
+        print(filter_W.shape)
+        print(cos_cut_var.shape)
+        filter_W  =filter_W * cos_cut_var
         s_output = self.scalar_msg(node_s)
 
-        print(s_output.shape)
-        print(filter_W.shape)
-        print(s_output[edge[:, 1]])
-
+        
         
         filer_output = filter_W * s_output[edge[:, 1]]
 
@@ -121,7 +131,7 @@ class Pain(nn.Module):
         cutoff_dist: float = 5.0,
     ) -> None:
         super().__init__()
-        num_atoms = 119
+        num_atoms = 100
         self.num_features = num_features
         self.cutoff = cutoff_dist 
         self.embedding  = nn.Embedding(num_unique_atoms,num_features)
