@@ -7,9 +7,9 @@ def cos_cut(edge_dis,cutoff):
     return torch.where(edge_dis<=cutoff,0.5*(torch.cos(edge_dis/cutoff)+1)
                        ,torch.tensor(0.0,dtype=edge_dis.dtype))
 #look for paper for formula 
-def rbf(edge_dis,rbf_features,cutoff):
+def rbf(edge_dis,num_rbf_features,cutoff):
 
-    n= torch.arange(rbf_features,device= edge_dis.device)+1
+    n= torch.arange(num_rbf_features,device = edge_dis.device)+1
     inner_part =(n*torch.pi/cutoff)*edge_dis.unsqueeze(-1)
     return torch.sin(inner_part)/edge_dis.unsqueeze(-1)
 
@@ -32,9 +32,12 @@ class Message(nn.Module):
         filter_W =self.filter(rbf(edge_dis,self.edge_size,self.cutoff))
         filter_W  =filter_W *  cos_cut(edge_dis,self.cutoff).unsqueeze(-1)
         s_output = self.scalar_msg(node_s)
+
         print(s_output.shape)
         print(filter_W.shape)
         print(s_output[edge[:, 1]])
+
+        
         filer_output = filter_W * s_output[edge[:, 1]]
 
         gate_state_vector, gate_edge_vector, message_scalar = torch.split(
@@ -121,7 +124,7 @@ class Pain(nn.Module):
         num_atoms = 119
         self.num_features = num_features
         self.cutoff = cutoff_dist 
-        self.embedding  = nn.Embedding(num_atoms,num_features)
+        self.embedding  = nn.Embedding(num_unique_atoms,num_features)
         self.num_layers =3
         self.num_unique_atoms=num_unique_atoms
         #### Architecture making the block first thinng in figure 2 
