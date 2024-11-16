@@ -43,9 +43,11 @@ class Message(nn.Module):
         
         print(filter_W.shape)
         print(cos_cut_var.shape)
+       
         filter_W  =filter_W * cos_cut_var
         s_output = self.scalar_msg(node_s)
-
+        print(s_output[edge[:, 1]].shape)
+        print(edge.shape)
         
         
         filer_output = filter_W * s_output[edge[:, 1]]
