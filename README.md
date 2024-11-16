@@ -1,3 +1,4 @@
+Group No.5
 # 02456 Molecular Property Prediction using Graph Neural Networks
 This repository serves as a help to get you started with the project "Molecular Property Prediction using Graph Neural Networks" in 02456 Deep Learning. In particular, it provides code for loading and using the QM9 dataset and for post-processing [PaiNN](https://arxiv.org/pdf/2102.03150)'s atomwise predictions as well as a minimal example of how to train the PaiNN model using these modules.
 
