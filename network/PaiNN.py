@@ -7,7 +7,7 @@ import torch.nn as nn
 #     mask = (distances < cutoff).float()  # Only values within cutoff contribute 
 #     cutoff_values = 0.5 * (torch.cos(distances * (torch.pi / cutoff)) + 1.0)
 #     return cutoff_values * mask
-
+#test
 
 
 # look into paper for formula 
