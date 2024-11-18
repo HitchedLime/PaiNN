@@ -1,5 +1,6 @@
 import torch 
 import torch.nn as nn
+from sympy import print_tree
 from torch_geometric.nn import radius_graph
 
 
@@ -50,11 +51,11 @@ class Message(nn.Module):
 
         s_output = self.scalar_msg(node_s)
 
-        print(filter_W.shape)
-        print(cos_cut_var.shape)
-        print(s_output.shape)
-        print(s_output[edge[:, 1]].shape)
-        print(edge.shape)
+        # print(filter_W.shape)
+        # print(cos_cut_var.shape)
+        # print(s_output.shape)
+        # print(s_output[edge[:, 1]].shape)
+        # print(edge.shape)
 
 
 
@@ -68,25 +69,31 @@ class Message(nn.Module):
             self.num_features,
             dim = 1,
         )
-
+        # print("Gate_state", gate_state_vector.shape)
+        # print("gate_edge",gate_edge_vector.shape)
+        # print("message_scalar",message_scalar.shape)
+        # print("node_ves",node_vec[edge[:,1]].shape)
         # the arrow from r_ij  hamadar with split 
-        message_vec = node_vec[edge[:,1]] * gate_state_vector
+        message_vec = node_vec[edge[:,1]] * gate_state_vector.unsqueeze(2)
 
+        # print("Gate edge vector",gate_edge_vector.unsqueeze(-1).shape)
+        # print("edge diff",edge_dis.unsqueeze(-1).shape)
+        # print("edge_ve",(edge_difference/edge_dis.unsqueeze(-1)).unsqueeze(-1).shape)
         #the aroorw from v_i after split 
-        edge_vec = gate_edge_vector.unsqueeze(-1) *(edge_difference/edge_dis.unsqueeze(-1)).unsqueeze(-1)
+        edge_vec = gate_edge_vector.unsqueeze(1) *(edge_difference[edge[:,1]]/edge_dis[edge[:,1]].unsqueeze(-1)).unsqueeze(-1)
         
 
         temp_s = torch.zeros_like(node_s)
         temp_vec = torch.zeros_like(node_vec)
 
         #solved my problem when 
-        # temp_s.index_add_(0, edge[:, 0], message_scalar)
-        # temp_vec.index_add_(0, edge[:, 0], message_vec)
+        temp_s.index_add_(0, edge[:, 0], message_scalar)
+        temp_vec.index_add_(0, edge[:, 0], message_vec)
         
       
 
-        temp_s.scatter_add_(0, edge[:, 0].unsqueeze(1).expand(-1, self.num_features), message_scalar)
-        temp_vec.scatter_add_(0, edge[:, 0].unsqueeze(1).expand(-1, message_vec.size(1)), message_vec)
+        # temp_s.scatter_add_(0, edge[:, 0].unsqueeze(1).expand(-1, self.num_features), message_scalar)
+        # temp_vec.scatter_add_(0, edge[:, 0].unsqueeze(1).expand(-1, message_vec.size(1)), message_vec)
 
 
         delta_node_scalar = node_s + temp_s

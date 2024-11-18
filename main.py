@@ -55,6 +55,7 @@ for epoch in pbar:
 
     loss_epoch = 0.
     for batch in dm.train_dataloader():
+
         batch = batch.to(device)
         # print(f"This is z {batch.z}")
         # print(f"This is pos {batch.pos}")
