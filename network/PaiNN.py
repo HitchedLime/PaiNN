@@ -1,5 +1,6 @@
 import torch 
 import torch.nn as nn
+from torch_geometric.nn import radius_graph
 
 
 # def cos_cut(distances, cutoff):
@@ -30,26 +31,36 @@ class Message(nn.Module):
         self.edge_size = edge_size
         self.num_features = num_features
         self.cutoff = cutoff
+        self.num_atoms = 20
 
         #node size 3*128 = 384 as output 
         self.scalar_msg = nn.Sequential(nn.Linear(self.num_features,self.num_features),
                                         nn.SiLU(),
                                         nn.Linear(num_features,num_features*3))
-        self.filter= nn.Linear(edge_size, num_features * 3)
+        self.filter= nn.Linear(self.num_atoms, self.num_features*3)
+
+
     def forward(self,node_s,node_vec,edge,edge_difference,edge_dis):
         #filter  its marked as W in the paper 
-        filter_W =self.filter(rbf(edge_dis,self.edge_size,self.cutoff))
-        cos_cut_var =  cos_cut(edge_dis,self.cutoff).unsqueeze(-1)
-        
+        filter_W =self.filter(rbf(edge_dis,self.num_atoms,self.cutoff))[edge[:, 1]]
+        cos_cut_var =  cos_cut(edge_dis,self.cutoff).unsqueeze(-1)[edge[:, 1]]
+
+
+        filter_W  =filter_W * cos_cut_var
+
+        s_output = self.scalar_msg(node_s)
+
         print(filter_W.shape)
         print(cos_cut_var.shape)
-       
-        filter_W  =filter_W * cos_cut_var
-        s_output = self.scalar_msg(node_s)
+        print(s_output.shape)
         print(s_output[edge[:, 1]].shape)
         print(edge.shape)
-        
-        
+
+
+
+
+
+
         filer_output = filter_W * s_output[edge[:, 1]]
 
         gate_state_vector, gate_edge_vector, message_scalar = torch.split(
@@ -183,8 +194,8 @@ class Pain(nn.Module):
         edge_attr = input_dict['edge_attr']      # Edge attributes
         batch = input_dict['batch']     # Batch assignments
         num_atoms = torch.bincount(batch)        # Number of atoms per molecule
-        
-        # Compute relative positions between connected nodes (atoms)
+        edge_index =radius_graph(x, r=1.5, batch=batch, loop=False)
+
         edge_diff = pos[edge_index[1]] - pos[edge_index[0]]  
         if compute_forces:
             edge_diff.requires_grad_()  
