@@ -43,8 +43,8 @@ class Message(nn.Module):
 
     def forward(self,node_s,node_vec,edge,edge_difference,edge_dis):
         #filter  its marked as W in the paper 
-        filter_W =self.filter(rbf(edge_dis,self.num_atoms,self.cutoff))[edge[:, 1]]
-        cos_cut_var =  cos_cut(edge_dis,self.cutoff).unsqueeze(-1)[edge[:, 1]]
+        filter_W =self.filter(rbf(edge_dis,self.num_atoms,self.cutoff))[edge[1, :]]
+        cos_cut_var =  cos_cut(edge_dis,self.cutoff).unsqueeze(-1)[edge[1, :]]
 
 
         filter_W  =filter_W * cos_cut_var
@@ -57,12 +57,15 @@ class Message(nn.Module):
         # print(s_output[edge[:, 1]].shape)
         # print(edge.shape)
 
+        print("filter_W shape:", filter_W.shape)
+        print("cos_cut_var shape:", cos_cut_var.shape)
+        print("edge size:", edge.shape)  # Check shape here
+        print("edge[1, :] shape:", edge[1, :].shape)
 
 
 
 
-
-        filer_output = filter_W * s_output[edge[:, 1]]
+        filer_output = filter_W * s_output[edge[1,:]]
 
         gate_state_vector, gate_edge_vector, message_scalar = torch.split(
             filer_output, 
