@@ -51,43 +51,54 @@ class Message(nn.Module):
 
         s_output = self.scalar_msg(node_s)
 
-        # print(filter_W.shape)
-        # print(cos_cut_var.shape)
-        # print(s_output.shape)
-        # print(s_output[edge[:, 1]].shape)
-        # print(edge.shape)
-
-        print("filter_W shape:", filter_W.shape)
-        print("cos_cut_var shape:", cos_cut_var.shape)
-        print("edge size:", edge.shape)  # Check shape here
-        print("edge[1, :] shape:", edge[1, :].shape)
-
-
-
+        #print(s_output[edge[:, 1]].shape)
+        #print(edge.shape)
+        #print(s_output.shape)
+        #print("filter_W shape:", filter_W.shape)
+        #print("cos_cut_var shape:", cos_cut_var.shape)
+        #print("edge size:", edge.shape)  # Check shape here
+        #print("edge[1, :] shape:", edge[1, :].shape)
 
         filer_output = filter_W * s_output[edge[1,:]]
+
+        
+        #print("filer_output shape:", filer_output.shape, flush=True)
 
         gate_state_vector, gate_edge_vector, message_scalar = torch.split(
             filer_output, 
             self.num_features,
             dim = 1,
         )
-        # print("Gate_state", gate_state_vector.shape)
-        # print("gate_edge",gate_edge_vector.shape)
-        # print("message_scalar",message_scalar.shape)
-        # print("node_ves",node_vec[edge[:,1]].shape)
-        # the arrow from r_ij  hamadar with split 
-        message_vec = node_vec[edge[:,1]] * gate_state_vector.unsqueeze(2)
+
+        #print("node_vec shape:", node_vec.shape)
+        #print("node_vec[edge[:, 1]] shape:", node_vec[edge[:, 1]].shape)
+        #print("gate_state_vector shape:", gate_state_vector.shape)
+        #print("gate_state_vector.unsqueeze(2) shape:", gate_state_vector.unsqueeze(2).shape)
+
+
+        message_vec = node_vec[edge[1,:]] * gate_state_vector.unsqueeze(2)
+
+
 
         # print("Gate edge vector",gate_edge_vector.unsqueeze(-1).shape)
         # print("edge diff",edge_dis.unsqueeze(-1).shape)
         # print("edge_ve",(edge_difference/edge_dis.unsqueeze(-1)).unsqueeze(-1).shape)
         #the aroorw from v_i after split 
-        edge_vec = gate_edge_vector.unsqueeze(1) *(edge_difference[edge[:,1]]/edge_dis[edge[:,1]].unsqueeze(-1)).unsqueeze(-1)
+        edge_vec = gate_edge_vector.unsqueeze(1) *(edge_difference[edge[1,:]]/edge_dis[edge[1,:]].unsqueeze(-1)).unsqueeze(-1)
+        
         
 
         temp_s = torch.zeros_like(node_s)
         temp_vec = torch.zeros_like(node_vec)
+
+        print("ARRIVED")
+
+
+
+        print("edge shape:", edge.shape)  # Should be [2, num_edges]
+        print("message_scalar shape:", message_scalar.shape)  # Should be [num_edges, num_features]
+        print("edge[:, 0] shape:", edge[:, 0].shape)          # Should be [num_edges]
+
 
         #solved my problem when 
         temp_s.index_add_(0, edge[:, 0], message_scalar)
