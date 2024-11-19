@@ -27,7 +27,7 @@ class Message(nn.Module):
         Filter = nn.Sequential(self.rbf(),
                                nn.Linear(self.num_rbf_features, 3 * self.num_features),
                                self.cos_cutoff())
-
+        
 
 
 
@@ -38,8 +38,20 @@ class Message(nn.Module):
     def cos_cutoff(self, r_dist: torch.Tensor) -> torch.Tensor:
         return 0.5 * (torch.cos(torch.pi * r_dist / self.cutoff_dist) + 1)
     
+
+    def forward(self, s, v, )
     
         
+        
+        
+        split1, split2, split3 = torch.split(phi * Filter, 3)
+
+        delta_v = v * split1
+        delta_v = torch.sum(delta_v + split3 * (self.distances/torch.norm(self.distances)), axis=0)
+
+        delta_s = torch.sum(split2, axis=0)
+
+        return delta_v, delta_s
 
 
 
