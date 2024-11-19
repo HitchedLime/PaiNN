@@ -150,7 +150,7 @@ class Update(nn.Module):
         
         delta_v = a_vv.unsqueeze(1) * Uv
         #not sure about this one 
-        dot_prod = torch.sum(Uv * Vv, dim=1)
+        dot_prod = torch.sum(Uv * Vv, dim=1,keepdim=True)
         delta_s = a_sv * dot_prod + a_ss
         
         return node_s + delta_s, node_vec + delta_v
