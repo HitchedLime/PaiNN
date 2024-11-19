@@ -129,17 +129,16 @@ class Update(nn.Module):
         Uv= self.U_dot(node_vec)
 
         Vv =self.V_dot(node_vec)
-        print(Vv.shape)
-        Vv_norm = torch.linalg.norm(Vv,dim=0, keepdim=True)
 
-
-        print(Vv_norm.shape)
-        print(node_s[:,:,0].shape)
+        Vv_norm = torch.linalg.vector_norm(Vv,dim=0,ord=2,keepdim= True)
 
 
 
 
-        mlp_input = torch.cat((Vv_norm.repeat(node_s.shape[0], 1), node_s[:,:,0]), dim=1)
+
+
+
+        mlp_input = torch.cat((Vv_norm, node_s), dim=1) # should be [
         mlp_output = self.update_mlp(mlp_input)
 
         a_vv, a_sv, a_ss = torch.split(
@@ -153,7 +152,7 @@ class Update(nn.Module):
         dot_prod = torch.sum(Uv * Vv, dim=1,keepdim=True)
         delta_s = a_sv * dot_prod + a_ss
         
-        return node_s + delta_s, node_vec + delta_v
+        return node_s[:,:,0] + delta_s, node_vec + delta_v[:,0,:]
 
 
 class Pain(nn.Module):
