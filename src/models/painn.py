@@ -2,6 +2,24 @@ import torch
 import torch.nn as nn
 
 
+class Message(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        
+    def rbf()
+
+
+
+    raise NotImplementedError
+
+
+# class Update(nn.Module):
+#     def __init__(self) -> None:
+#         super().__init__()
+
+#     raise NotImplementedError
+
+
 class PaiNN(nn.Module):
     """
     Polarizable Atom Interaction Neural Network with PyTorch.
@@ -30,6 +48,14 @@ class PaiNN(nn.Module):
                 two nodes (atoms) are neighbours.
         """
         super().__init__()
+        
+        self.num_message_passing_layers = num_message_passing_layers
+        self.num_features = num_features
+        self.num_outputs = num_outputs
+        self.num_rbf_features = num_rbf_features
+        self.num_unique_atoms = num_unique_atoms
+        self.cutoff_dist = cutoff_dist
+
         raise NotImplementedError
     def message_passing(self) -> None:
         pass
