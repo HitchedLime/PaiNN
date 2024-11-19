@@ -3,14 +3,31 @@ import torch.nn as nn
 
 
 class Message(nn.Module):
-    def __init__(self) -> None:
+    def __init__(self,
+                 num_rbf_features: int = 20,
+                 cutoff_dist: float = 5.0
+                 ) -> None:
         super().__init__()
+
+        self.num_features = num_features
+        self.num_rbf_features = num_rbf_features
+        self.cutoff_dist = cutoff_dist
+
+    def rbf(self, 
+            N: int = 20, 
+            r_dist: torch.Tensor)
+        n = torch.arange(1, N+1)
+        return torch.sin(n*torch.pi*torch.norm(r_dist) / self.cutoff_dist) / self.cutoff_dist
+    
+    def cos_cutoff(self,
+                   r_dist: torch.Tensor,
+                   ) -> None:
+        return 0.5 * (torch.cos(torch.pi * r_dist / self.cutoff_dist) + 1)
         
-    def rbf()
 
 
 
-    raise NotImplementedError
+    #raise NotImplementedError
 
 
 # class Update(nn.Module):
