@@ -4,25 +4,41 @@ import torch.nn as nn
 
 class Message(nn.Module):
     def __init__(self,
+                 num_features: int = 128,
                  num_rbf_features: int = 20,
-                 cutoff_dist: float = 5.0
+                 cutoff_dist: float = 5.0,
+                 v: torch.Tensor,
+                 s: torch.Tensor,
+                 distances: torch.Tensor
                  ) -> None:
         super().__init__()
 
         self.num_features = num_features
         self.num_rbf_features = num_rbf_features
         self.cutoff_dist = cutoff_dist
+        self.v = v
+        self.s = s
+        self.distances = distances
 
-    def rbf(self, 
-            N: int = 20, 
-            r_dist: torch.Tensor)
-        n = torch.arange(1, N+1)
+        # Actual block
+        phi = nn.Sequential(nn.Linear(self.num_features, self.num_features),
+                            nn.SiLU(),
+                            nn.Linear(self.num_features, 3 * self.num_features))
+        Filter = nn.Sequential(self.rbf(),
+                               nn.Linear(self.num_rbf_features, 3 * self.num_features),
+                               self.cos_cutoff())
+
+
+
+
+    def rbf(self, r_dist: torch.Tensor) -> torch.Tensor:
+        n = torch.arange(1, self.num_rbf_features+1)
         return torch.sin(n*torch.pi*torch.norm(r_dist) / self.cutoff_dist) / self.cutoff_dist
     
-    def cos_cutoff(self,
-                   r_dist: torch.Tensor,
-                   ) -> None:
+    def cos_cutoff(self, r_dist: torch.Tensor) -> torch.Tensor:
         return 0.5 * (torch.cos(torch.pi * r_dist / self.cutoff_dist) + 1)
+    
+    
         
 
 
@@ -72,6 +88,7 @@ class PaiNN(nn.Module):
         self.num_rbf_features = num_rbf_features
         self.num_unique_atoms = num_unique_atoms
         self.cutoff_dist = cutoff_dist
+        self.embedding = nn.Embedding(self.num_unique_atoms, self.num_features)
 
         raise NotImplementedError
     def message_passing(self) -> None:
