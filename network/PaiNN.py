@@ -91,8 +91,6 @@ class Message(nn.Module):
         temp_s = torch.zeros_like(node_s)
         temp_vec = torch.zeros_like(node_vec)
 
-        print("ARRIVED")
-
 
 
         print("edge shape:", edge.shape)  # Should be [2, num_edges]
@@ -101,20 +99,19 @@ class Message(nn.Module):
 
 
         #solved my problem when 
-        temp_s.index_add_(0, edge[:, 0], message_scalar)
-        temp_vec.index_add_(0, edge[:, 0], message_vec)
+        temp_s.index_add_(0, edge[0, :], message_scalar)
+        temp_vec.index_add_(0, edge[0, :], message_vec)
         
-      
-
-
 
 
         delta_node_scalar = node_s + temp_s
         delta_node_vector = node_vec + temp_vec
 
 
+        print("ARRIVED")
 
-
+        print("delta_node_scalar", delta_node_scalar.shape)
+        print("delta_node_vector", delta_node_vector.shape)
 
         #delta V_i vec and delga s_i
         return delta_node_vector,delta_node_scalar  
