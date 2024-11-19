@@ -92,8 +92,7 @@ class Message(nn.Module):
         
       
 
-        # temp_s.scatter_add_(0, edge[:, 0].unsqueeze(1).expand(-1, self.num_features), message_scalar)
-        # temp_vec.scatter_add_(0, edge[:, 0].unsqueeze(1).expand(-1, message_vec.size(1)), message_vec)
+
 
 
         delta_node_scalar = node_s + temp_s
@@ -117,19 +116,26 @@ class Update(nn.Module):
                                         nn.Linear(num_features,3*num_features))
     def forward(self,node_s,node_vec):
         Uv= self.U_dot(node_vec)
-        Vv =self.V_dot(node_s) 
-        Vv_norm = torch.linalg(Vv,dim= 1)
+
+        Vv =self.V_dot(node_vec)
+        print(Vv.shape)
+        Vv_norm = torch.linalg.norm(Vv,dim=0, keepdim=True)
 
 
-        mlp_input = torch.cat((Vv_norm, node_s), dim=1)
+        print(Vv_norm.shape)
+        print(node_s[:,:,0].shape)
+
+
+
+
+        mlp_input = torch.cat((Vv_norm.repeat(node_s.shape[0], 1), node_s[:,:,0]), dim=1)
         mlp_output = self.update_mlp(mlp_input)
 
-
         a_vv, a_sv, a_ss = torch.split(
-            mlp_output,                                        
-            node_vec.shape[-1],      # split it threaa wayws                                   
-            dim = 1,
-        )
+                mlp_output,
+                node_vec.shape[-1],      # split it threaa wayws
+                dim = 1,
+            )
         
         delta_v = a_vv.unsqueeze(1) * Uv
         #not sure about this one 
