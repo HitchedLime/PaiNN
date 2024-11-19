@@ -1,5 +1,7 @@
 import torch 
 import torch.nn as nn
+from sympy import print_tree
+from torch_geometric.nn import radius_graph
 
 
 # def cos_cut(distances, cutoff):
@@ -30,24 +32,36 @@ class Message(nn.Module):
         self.edge_size = edge_size
         self.num_features = num_features
         self.cutoff = cutoff
+        self.num_atoms = 20
 
         #node size 3*128 = 384 as output 
         self.scalar_msg = nn.Sequential(nn.Linear(self.num_features,self.num_features),
                                         nn.SiLU(),
                                         nn.Linear(num_features,num_features*3))
-        self.filter= nn.Linear(edge_size, num_features * 3)
+        self.filter= nn.Linear(self.num_atoms, self.num_features*3)
+
+
     def forward(self,node_s,node_vec,edge,edge_difference,edge_dis):
         #filter  its marked as W in the paper 
-        filter_W =self.filter(rbf(edge_dis,self.edge_size,self.cutoff))
-        cos_cut_var =  cos_cut(edge_dis,self.cutoff).unsqueeze(-1)
-        
-        print(filter_W.shape)
-        print(cos_cut_var.shape)
+        filter_W =self.filter(rbf(edge_dis,self.num_atoms,self.cutoff))[edge[:, 1]]
+        cos_cut_var =  cos_cut(edge_dis,self.cutoff).unsqueeze(-1)[edge[:, 1]]
+
+
         filter_W  =filter_W * cos_cut_var
+
         s_output = self.scalar_msg(node_s)
 
-        
-        
+        # print(filter_W.shape)
+        # print(cos_cut_var.shape)
+        # print(s_output.shape)
+        # print(s_output[edge[:, 1]].shape)
+        # print(edge.shape)
+
+
+
+
+
+
         filer_output = filter_W * s_output[edge[:, 1]]
 
         gate_state_vector, gate_edge_vector, message_scalar = torch.split(
@@ -55,25 +69,30 @@ class Message(nn.Module):
             self.num_features,
             dim = 1,
         )
-
+        # print("Gate_state", gate_state_vector.shape)
+        # print("gate_edge",gate_edge_vector.shape)
+        # print("message_scalar",message_scalar.shape)
+        # print("node_ves",node_vec[edge[:,1]].shape)
         # the arrow from r_ij  hamadar with split 
-        message_vec = node_vec[edge[:,1]] * gate_state_vector
+        message_vec = node_vec[edge[:,1]] * gate_state_vector.unsqueeze(2)
 
+        # print("Gate edge vector",gate_edge_vector.unsqueeze(-1).shape)
+        # print("edge diff",edge_dis.unsqueeze(-1).shape)
+        # print("edge_ve",(edge_difference/edge_dis.unsqueeze(-1)).unsqueeze(-1).shape)
         #the aroorw from v_i after split 
-        edge_vec = gate_edge_vector.unsqueeze(-1) *(edge_difference/edge_dis.unsqueeze(-1)).unsqueeze(-1)
+        edge_vec = gate_edge_vector.unsqueeze(1) *(edge_difference[edge[:,1]]/edge_dis[edge[:,1]].unsqueeze(-1)).unsqueeze(-1)
         
 
         temp_s = torch.zeros_like(node_s)
         temp_vec = torch.zeros_like(node_vec)
 
         #solved my problem when 
-        # temp_s.index_add_(0, edge[:, 0], message_scalar)
-        # temp_vec.index_add_(0, edge[:, 0], message_vec)
+        temp_s.index_add_(0, edge[:, 0], message_scalar)
+        temp_vec.index_add_(0, edge[:, 0], message_vec)
         
       
 
-        temp_s.scatter_add_(0, edge[:, 0].unsqueeze(1).expand(-1, self.num_features), message_scalar)
-        temp_vec.scatter_add_(0, edge[:, 0].unsqueeze(1).expand(-1, message_vec.size(1)), message_vec)
+
 
 
         delta_node_scalar = node_s + temp_s
@@ -97,19 +116,26 @@ class Update(nn.Module):
                                         nn.Linear(num_features,3*num_features))
     def forward(self,node_s,node_vec):
         Uv= self.U_dot(node_vec)
-        Vv =self.V_dot(node_s) 
-        Vv_norm = torch.linalg(Vv,dim= 1)
+
+        Vv =self.V_dot(node_vec)
+        print(Vv.shape)
+        Vv_norm = torch.linalg.norm(Vv,dim=0, keepdim=True)
 
 
-        mlp_input = torch.cat((Vv_norm, node_s), dim=1)
+        print(Vv_norm.shape)
+        print(node_s[:,:,0].shape)
+
+
+
+
+        mlp_input = torch.cat((Vv_norm.repeat(node_s.shape[0], 1), node_s[:,:,0]), dim=1)
         mlp_output = self.update_mlp(mlp_input)
 
-
         a_vv, a_sv, a_ss = torch.split(
-            mlp_output,                                        
-            node_vec.shape[-1],      # split it threaa wayws                                   
-            dim = 1,
-        )
+                mlp_output,
+                node_vec.shape[-1],      # split it threaa wayws
+                dim = 1,
+            )
         
         delta_v = a_vv.unsqueeze(1) * Uv
         #not sure about this one 
@@ -181,8 +207,8 @@ class Pain(nn.Module):
         edge_attr = input_dict['edge_attr']      # Edge attributes
         batch = input_dict['batch']     # Batch assignments
         num_atoms = torch.bincount(batch)        # Number of atoms per molecule
-        
-        # Compute relative positions between connected nodes (atoms)
+        edge_index =radius_graph(x, r=1.5, batch=batch, loop=False)
+
         edge_diff = pos[edge_index[1]] - pos[edge_index[0]]  
         if compute_forces:
             edge_diff.requires_grad_()  

@@ -7,7 +7,7 @@ def cli(args: list = []):
     # Data
     parser.add_argument('--target', default=7, type=int) # 7 => Internal energy at 0K
     parser.add_argument('--data_dir', default='data/', type=str)
-    parser.add_argument('--batch_size_train', default=100, type=int)
+    parser.add_argument('--batch_size_train', default=10, type=int)
     parser.add_argument('--batch_size_inference', default=1000, type=int)
     parser.add_argument('--num_workers', default=0, type=int)
     parser.add_argument('--splits', nargs=3, default=[110000, 10000, 10831], type=int) # [num_train, num_val, num_test]
