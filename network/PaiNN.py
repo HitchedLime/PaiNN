@@ -130,15 +130,23 @@ class Update(nn.Module):
 
         Vv =self.V_dot(node_vec)
 
-        Vv_norm = torch.linalg.vector_norm(Vv,dim=0,ord=2,keepdim= True)
+        Vv_norm = torch.sqrt(torch.mm(Vv.t(), Vv))
+
+        node_s_selected = node_s[:, :, 0]  # Shape will be (174, 128)
+
+
+        Vv_norm_expanded = Vv_norm.unsqueeze(0).expand(node_s_selected.shape[0], -1,
+                                                       -1)  # Shape will be (174, 128, 128)
+
+
+        Vv_norm_reduced = Vv_norm_expanded.mean(dim=2)  # Shape will be (174, 128)
+
+        # stack park of net
+        mlp_input = torch.cat((Vv_norm_reduced, node_s_selected), dim=1)  # Shape will be (174, 256)
 
 
 
 
-
-
-
-        mlp_input = torch.cat((Vv_norm, node_s), dim=1) # should be [
         mlp_output = self.update_mlp(mlp_input)
 
         a_vv, a_sv, a_ss = torch.split(
