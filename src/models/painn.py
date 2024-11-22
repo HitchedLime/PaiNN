@@ -29,8 +29,6 @@ class Message(nn.Module):
                                self.cos_cutoff())
         
 
-
-
     def rbf(self, r_dist: torch.Tensor) -> torch.Tensor:
         n = torch.arange(1, self.num_rbf_features+1)
         return torch.sin(n*torch.pi*torch.norm(r_dist) / self.cutoff_dist) / self.cutoff_dist
@@ -40,10 +38,6 @@ class Message(nn.Module):
     
 
     def forward(self, s, v, )
-    
-        
-        
-        
         split1, split2, split3 = torch.split(phi * Filter, 3)
 
         delta_v = v * split1
