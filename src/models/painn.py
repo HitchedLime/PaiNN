@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-
+from torch_cluster import radius_graph
 
 class Message(nn.Module):
     def __init__(self,
@@ -21,10 +21,10 @@ class Message(nn.Module):
         self.distances = distances
 
         # Actual block
-        phi = nn.Sequential(nn.Linear(self.num_features, self.num_features),
+        self.phi = nn.Sequential(nn.Linear(self.num_features, self.num_features),
                             nn.SiLU(),
                             nn.Linear(self.num_features, 3 * self.num_features))
-        Filter = nn.Sequential(self.rbf(),
+        self.Filter = nn.Sequential(self.rbf(),
                                nn.Linear(self.num_rbf_features, 3 * self.num_features),
                                self.cos_cutoff())
         
@@ -37,8 +37,11 @@ class Message(nn.Module):
         return 0.5 * (torch.cos(torch.pi * r_dist / self.cutoff_dist) + 1)
     
 
-    def forward(self, s, v, )
-        split1, split2, split3 = torch.split(phi * Filter, 3)
+    def forward(self, s, v, r_dir)
+        phi_1 = self.phi(s)
+        filter_1 = self.Filter(r_dir)
+
+        split1, split2, split3 = torch.split(phi_1 * filter_1, 3)
 
         delta_v = v * split1
         delta_v = torch.sum(delta_v + split3 * (self.distances/torch.norm(self.distances)), axis=0)
@@ -52,10 +55,34 @@ class Message(nn.Module):
     #raise NotImplementedError
 
 
-# class Update(nn.Module):
-#     def __init__(self) -> None:
-#         super().__init__()
+class Update(nn.Module):
+    def __init__(self, 
+                 v: torch.Tensor,
+                 s: torch.Tensor,
+                 num_features: int = 128) -> None:
+        super().__init__()
+        self.num_features = num_features
 
+        self.sLin = nn.Sequential(nn.Linear(2 * self.num_features, self.num_features),
+                             nn.SiLU(),
+                             nn.Linear(self.num_features, 3 * self.num_features)) # Linear transformation of s
+        
+        self.vULin = nn.Linear(self.num_features, self.num_features, bias=False)
+        self.vVLin = nn.Linear(self.num_features, self.num_features, bias=False)
+
+    def forward(self)
+        vU = self.vULin(v)
+        vV = self.vVLin(v)
+
+        stack = torch.hstack(s, torch.norm(vV))
+        split1, split2, split3 = torch.split(self.sLin(stack), 3) 
+
+        vV = torch.dot(vV[0], vV[1])
+
+        delta_v_u = vU * split1
+        delta_s_u = (vV * split2) + split3
+
+        return delta_v_u, delta_s_u
 #     raise NotImplementedError
 
 
@@ -128,4 +155,12 @@ class PaiNN(nn.Module):
             A torch.FloatTensor of size [num_nodes, num_outputs] with atomic
             contributions to the overall molecular property prediction.
         """
+        s = self.embedding(atoms) # Embedded atoms
+        edges = radius_graph(atom_positions, r=self.cutoff_dist, batch=graph_indexes) # Adjacency matrix
+        v = torch.zeros_like(s).unsqueeze(-1).repeat(1, 1, 3) # Feature vector
+        r_dir = atom_positions[edges[1]] - atom_positions[edges[0]] # Directions
+
+
+
+
         raise NotImplementedError
