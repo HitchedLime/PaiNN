@@ -292,7 +292,8 @@ class Update(nn.Module):
         return d_viu, d_siu
     
 
-from torch_cluster import radius_graph
+#from torch_cluster import radius_graph
+from torch_geometric.nn import radius_graph
 
 class PaiNN(nn.Module):
     """
