@@ -216,19 +216,19 @@ class AtomwisePostProcessing(nn.Module):
 
         return output_per_graph
     
+import torch.nn as nn
 from torch.nn import Linear, SiLU
 from torch_scatter import scatter_sum
 
 class Message(nn.Module):
-    def __init__(self, Ls=None, Lrbf=None, Lsplit=None, nRbf=20, nF=128):
+    def __init__(self, Ls=None, Lrbf=None, nRbf=20, nF=128):
         super(Message, self).__init__()
         self.Ls = Ls if Ls is not None else nn.Sequential(
-            Linear(nF, nF, False),
+            Linear(nF, nF),
             SiLU(),
-            Linear(nF, 3*nF, False),
+            Linear(nF, 3*nF),
         )
-        self.Lrbf = Lrbf if Lrbf is not None else Linear(nRbf, 3*nF, False)
-        self.Lsplit = Lsplit if Lsplit is not None else Linear(3*nF, nF, False)
+        self.Lrbf = Lrbf if Lrbf is not None else Linear(nRbf, 3*nF)
 
     def fCut(self, rij_norm, rCut):
         f_cut = 0.5 * (torch.cos(torch.pi * rij_norm / rCut) + 1)
@@ -252,13 +252,15 @@ class Message(nn.Module):
         phi = self.Ls(sj)
         phiW = phi * Ws
 
-        SPLIT = self.Lsplit(phiW)
+        SPLIT1 = phiW[:,0:128]
+        SPLIT2 = phiW[:,128:256]
+        SPLIT3 = phiW[:,256:]
 
-        phiWvv = vj * SPLIT.unsqueeze(-1).repeat(1, 1, 3)
-        phiWvs = SPLIT.unsqueeze(-1) * rij_hat.unsqueeze(1)
+        phiWvv = vj * SPLIT1.unsqueeze(-1).repeat(1, 1, 3)
+        phiWvs = SPLIT3.unsqueeze(-1) * rij_hat.unsqueeze(1)
         
-        d_vim = scatter_sum((phiWvv + phiWvs), eij[0], dim=0)
-        d_sim = scatter_sum(SPLIT, eij[0], dim=0)
+        d_vim = scatter_sum((phiWvv + phiWvs), eij[1], dim=0)
+        d_sim = scatter_sum(SPLIT2, eij[1], dim=0)
         return d_vim, d_sim
 
 
@@ -269,30 +271,31 @@ class Update(nn.Module):
         self.Luv = Luv if Luv is not None else Linear(3, 3, False)
         
         self.Ls = Ls if Ls is not None else nn.Sequential(
-            Linear(in_features=256, out_features=128, bias=False),
+            Linear(in_features=256, out_features=128),
             SiLU(),
-            Linear(in_features=128, out_features=384, bias=False),
-            Linear(in_features=384, out_features=128, bias=False),
+            Linear(in_features=128, out_features=384),
         )
 
-    def forward(self, vj, sj, eij):
-        Uvj = self.Luu(vj) 
-        Vvj = self.Luv(vj)
+    def forward(self, vi, si):
+        Uvi = self.Luu(vi) 
+        Vvi = self.Luv(vi)
 
-        V_norm = torch.norm(Vvj,dim=-1)
-        STACK = torch.hstack([V_norm, sj])
+        V_norm = torch.norm(Vvi,dim=-1)
+        STACK = torch.hstack([V_norm, si])
 
-        SP = torch.sum(Uvj * Vvj, dim=-1) 
+        SP = torch.sum(Uvi * Vvi, dim=-1) 
 
         SPLIT = self.Ls(STACK)
+        SPLIT1 = SPLIT[:, 0:128]
+        SPLIT2 = SPLIT[:, 128:256]
+        SPLIT3 = SPLIT[:, 256:]
 
-        d_viu = scatter_sum((Uvj * SPLIT.unsqueeze(-1).repeat(1, 1, 3)), eij[0], dim=0)
-        d_siu = scatter_sum((SP * SPLIT + SPLIT), eij[0], dim=0)
+        d_viu = Uvi * SPLIT1.unsqueeze(-1).repeat(1, 1, 3)
+        d_siu = SP * SPLIT2 + SPLIT3
 
         return d_viu, d_siu
     
 
-#from torch_cluster import radius_graph
 from torch_geometric.nn import radius_graph
 
 class PaiNN(nn.Module):
@@ -323,9 +326,9 @@ class PaiNN(nn.Module):
         self.Lu = Lu
 
         self.Lr = nn.Sequential(
-            Linear(in_features=128, out_features=64, bias=False),
+            Linear(in_features=128, out_features=64),
             SiLU(),
-            Linear(in_features=64, out_features=1, bias=False),
+            Linear(in_features=64, out_features=1),
         )
 
     def forward(
@@ -336,26 +339,24 @@ class PaiNN(nn.Module):
     ) -> torch.FloatTensor:
         si = self.zi(atoms)
         eij = radius_graph(atom_positions, r=self.cutoff_dist, batch=graph_indexes)
-        sj = si[eij[1]]
+        sj = si[eij[0]]
         vi = torch.zeros_like(si).unsqueeze(-1).repeat(1, 1, 3)
-        vj = vi[eij[1]]
+        vj = vi[eij[0]]
         rij_vec = atom_positions[eij[0]] - atom_positions[eij[1]]
         for _ in range(self.num_message_passing_layers):
             d_vim, d_sim = self.Lm(vj, sj, rij_vec, eij)
-            vi += d_vim
-            si += d_sim
+            vi = vi + d_vim
+            si = si + d_sim
 
-            sj = si[eij[1]]
-            vj = vi[eij[1]]
+            d_viu, d_siu = self.Lu(vi, si)
 
-            d_viu, d_siu = self.Lu(vj, sj, eij)
-
-            vi += d_viu
-            si += d_siu
+            vi = vi + d_viu
+            si = si + d_siu
         
         Sigma = self.Lr(si)
 
         return Sigma
+    
     
 
 def cli(args: list = []):
