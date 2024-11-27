@@ -446,8 +446,9 @@ optimizer = torch.optim.AdamW(
 
 
 painn.train()
-pbar = trange(args.num_epochs)
-for epoch in pbar:
+#pbar = trange(args.num_epochs)
+#for epoch in pbar:
+for epoch in range(args.num_epochs):
 
     loss_epoch = 0.
     for batch in dm.train_dataloader():
@@ -473,7 +474,7 @@ for epoch in pbar:
         loss_epoch += loss_step.detach().item()
     loss_epoch /= len(dm.data_train)
 
-    print(f"{epoch + 1}\t{loss_epoch:.3e}\n")
+    #print(f"{epoch + 1}\t{loss_epoch:.3e}")
     # with open(output_file, "a") as rf:
     #     rf.write(f"{epoch + 1}\t{loss_epoch:.6e}\n")
 
@@ -481,28 +482,29 @@ for epoch in pbar:
 
     
 
-mae = 0
-painn.eval()
-with torch.no_grad():
-    for batch in dm.test_dataloader():
-        batch = batch.to(device)
+    mae = 0
+    painn.eval()
+    with torch.no_grad():
+        for batch in dm.test_dataloader():
+            batch = batch.to(device)
 
-        atomic_contributions = painn(
-            atoms=batch.z,
-            atom_positions=batch.pos,
-            graph_indexes=batch.batch,
-        )
-        preds = post_processing(
-            atoms=batch.z,
-            graph_indexes=batch.batch,
-            atomic_contributions=atomic_contributions,
-        )
-        mae += F.l1_loss(preds, batch.y, reduction='sum')
+            atomic_contributions = painn(
+                atoms=batch.z,
+                atom_positions=batch.pos,
+                graph_indexes=batch.batch,
+            )
+            preds = post_processing(
+                atoms=batch.z,
+                graph_indexes=batch.batch,
+                atomic_contributions=atomic_contributions,
+            )
+            mae += F.l1_loss(preds, batch.y, reduction='sum')
 
-mae /= len(dm.data_test)
-unit_conversion = dm.unit_conversion[args.target]
+    mae /= len(dm.data_test)
+    unit_conversion = dm.unit_conversion[args.target]
 
-# with open(output_file, "a") as rf:
-#     rf.write(f"\nTest MAE: {unit_conversion(mae):.3f}\n")
+    # with open(output_file, "a") as rf:
+    #     rf.write(f"\nTest MAE: {unit_conversion(mae):.3f}\n")
 
-print(f'Test MAE: {unit_conversion(mae):.3f}')
+    #print(f'Test MAE: {unit_conversion(mae):.3f}\n')
+    print(f"Epoch: {epoch + 1}\tTrain loss: {loss_epoch:.3e}\tTest MAE: {unit_conversion(mae):.3f}")
