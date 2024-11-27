@@ -34,6 +34,6 @@ module load cuda/11.8
 /appl/cuda/11.8.0/samples/bin/x86_64/linux/release/deviceQuery
 
 module load python3/3.10.13
-cd $BLACKHOLE/group85
-source painn/bin/activate
-python3 PaiNN/pyPainnMessageUpdate.py
+
+source $BLACKHOLE/group85/painn/bin/activate
+python3 $BLACKHOLE/PaiNN/pyPainnMessageUpdate.py
