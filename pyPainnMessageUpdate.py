@@ -395,6 +395,7 @@ args = cli(args)
 seed_everything(args.seed)
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print(device)
+device_name = torch.cuda.get_device_name(torch.cuda.current_device())
 
 dm = QM9DataModule(
     target=args.target,
@@ -435,6 +436,14 @@ optimizer = torch.optim.AdamW(
     weight_decay=args.weight_decay,
 )
 
+import os
+
+output_file = "painn.txt"
+with open(output_file, "w") as rf:
+    rf.write(f"{device_name} Training and Evaluation Results\n")
+    rf.write("Epoch\tTrain Loss\n")  # Header for training loss
+
+
 painn.train()
 pbar = trange(args.num_epochs)
 for epoch in pbar:
@@ -462,6 +471,10 @@ for epoch in pbar:
 
         loss_epoch += loss_step.detach().item()
     loss_epoch /= len(dm.data_train)
+
+    with open(output_file, "a") as rf:
+        rf.write(f"{epoch + 1}\t{loss_epoch:.6e}\n")
+
     pbar.set_postfix_str(f'Train loss: {loss_epoch:.3e}')
 
 mae = 0
@@ -484,4 +497,8 @@ with torch.no_grad():
 
 mae /= len(dm.data_test)
 unit_conversion = dm.unit_conversion[args.target]
+
+with open(output_file, "a") as rf:
+    rf.write(f"\nTest MAE: {unit_conversion(mae):.3f}\n")
+
 print(f'Test MAE: {unit_conversion(mae):.3f}')
