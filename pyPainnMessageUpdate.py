@@ -474,37 +474,36 @@ for epoch in range(args.num_epochs):
         loss_epoch += loss_step.detach().item()
     loss_epoch /= len(dm.data_train)
 
-    #print(f"{epoch + 1}\t{loss_epoch:.3e}")
+    print(f"Epoch: {epoch + 1}\tTrain loss: {loss_epoch:.3e}")
+    
     # with open(output_file, "a") as rf:
     #     rf.write(f"{epoch + 1}\t{loss_epoch:.6e}\n")
 
     # pbar.set_postfix_str(f'Train loss: {loss_epoch:.3e}')
 
-    
+mae = 0
+painn.eval()
+with torch.no_grad():
+    for batch in dm.test_dataloader():
+        batch = batch.to(device)
 
-    mae = 0
-    painn.eval()
-    with torch.no_grad():
-        for batch in dm.test_dataloader():
-            batch = batch.to(device)
+        atomic_contributions = painn(
+            atoms=batch.z,
+            atom_positions=batch.pos,
+            graph_indexes=batch.batch,
+        )
+        preds = post_processing(
+            atoms=batch.z,
+            graph_indexes=batch.batch,
+            atomic_contributions=atomic_contributions,
+        )
+        mae += F.l1_loss(preds, batch.y, reduction='sum')
 
-            atomic_contributions = painn(
-                atoms=batch.z,
-                atom_positions=batch.pos,
-                graph_indexes=batch.batch,
-            )
-            preds = post_processing(
-                atoms=batch.z,
-                graph_indexes=batch.batch,
-                atomic_contributions=atomic_contributions,
-            )
-            mae += F.l1_loss(preds, batch.y, reduction='sum')
+mae /= len(dm.data_test)
+unit_conversion = dm.unit_conversion[args.target]
+print(f'Test MAE: {unit_conversion(mae):.3f}\n')
 
-    mae /= len(dm.data_test)
-    unit_conversion = dm.unit_conversion[args.target]
+# with open(output_file, "a") as rf:
+#     rf.write(f"\nTest MAE: {unit_conversion(mae):.3f}\n")
 
-    # with open(output_file, "a") as rf:
-    #     rf.write(f"\nTest MAE: {unit_conversion(mae):.3f}\n")
-
-    #print(f'Test MAE: {unit_conversion(mae):.3f}\n')
-    print(f"Epoch: {epoch + 1}\tTrain loss: {loss_epoch:.3e}\tTest MAE: {unit_conversion(mae):.3f}")
+    #print(f"Epoch: {epoch + 1}\tTrain loss: {loss_epoch:.3e}\tTest MAE: {unit_conversion(mae):.3f}")
