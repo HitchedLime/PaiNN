@@ -389,7 +389,6 @@ def cli(args: list = []):
     return args
 
 
-
 args = [] # Specify non-default arguments in this list
 args = cli(args)
 seed_everything(args.seed)
@@ -438,6 +437,13 @@ optimizer = torch.optim.AdamW(
 )
 
 painn.train()
+
+import os
+
+output_file = "painn.txt"
+with open(output_file, "w") as rf:
+    rf.write(f"{device_name} Training and Evaluation Results\n")
+    rf.write("Epoch\tTrain Loss\n")  # Header for training loss
 
 best_mae = float('inf') 
 patience = 10
@@ -496,7 +502,7 @@ for epoch in range(args.num_epochs):
     mae /= len(dm.data_test)
     unit_conversion = dm.unit_conversion[args.target]
     #print(f'Test MAE: {unit_conversion(mae):.3f}\n')
-    print(f"Epoch: {epoch + 1}\tTrain loss: {loss_epoch:.3e}\tTest MAE: {unit_conversion(mae):.3f}")
+    #print(f"Epoch: {epoch + 1}\tTrain loss: {loss_epoch:.3e}\tTest MAE: {unit_conversion(mae):.3f}")
     
     if mae < best_mae:
         best_mae = mae
@@ -507,5 +513,8 @@ for epoch in range(args.num_epochs):
     if patience_counter >= patience:
         print(f"Early stopping triggered after {epoch + 1} epochs.")
         break
+
+    with open(output_file, "a") as rf:
+        rf.write(f"Epoch: {epoch + 1}\tTrain loss: {loss_epoch:.3e}\tTest MAE: {unit_conversion(mae):.3f}\n")
 
 
