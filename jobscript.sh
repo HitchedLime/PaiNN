@@ -6,7 +6,7 @@
 #BSUB -J painn
 ### -- ask for number of cores (default: 1) --
 #BSUB -n 8
-#BSUB -R "span[hosts=1]"
+#BSUB -R "span[hosts]"
 ### -- Select the resources: 1 gpu in exclusive process mode --
 #BSUB -gpu "num=2:mode=exclusive_process"
 ### -- set walltime limit: hh:mm --  maximum 24 hours for GPU-queues right now
@@ -16,8 +16,6 @@
 #BSUB -R "select[gpu32gb]"
 #BSUB -R "select[sxm2]"
 ### -- set the email address --
-# please uncomment the following line and put in your e-mail address,
-# if you want to receive e-mail notifications on a non-default address
 #BSUB -u s134620@student.dtu.dk
 ### -- send notification at start --
 #BSUB -B
