@@ -445,10 +445,6 @@ with open(output_file, "w") as rf:
     rf.write(f"{device_name} Training and Evaluation Results\n")
     rf.write("Epoch\tTrain Loss\n")  # Header for training loss
 
-best_mae = float('inf') 
-patience = 10
-patience_counter = 0 
-
 #pbar = trange(args.num_epochs)
 #for epoch in pbar:
 for epoch in range(args.num_epochs):
@@ -502,6 +498,8 @@ for epoch in range(args.num_epochs):
 
     with open(output_file, "a") as rf:
         rf.write(f"Epoch: {epoch + 1}\tTrain loss: {loss_epoch:.3e}\tVal loss: {val_loss_epoch:.3e}\n")
+    print(f"Epoch: {epoch + 1}\tTrain loss: {loss_epoch:.3e}\tVal loss: {val_loss_epoch:.3e}\n")
+
 
 mae = 0
 painn.eval()
