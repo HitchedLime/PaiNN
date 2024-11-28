@@ -478,13 +478,12 @@ for epoch in range(args.num_epochs):
     loss_epoch /= len(dm.data_train)
 
     #print(f"Epoch: {epoch + 1}\tTrain loss: {loss_epoch:.3e}")
-
     # pbar.set_postfix_str(f'Train loss: {loss_epoch:.3e}')
 
-    mae = 0
     painn.eval()
+    val_loss_epoch = 0.0
     with torch.no_grad():
-        for batch in dm.test_dataloader():
+        for batch in dm.val_dataloader():  
             batch = batch.to(device)
 
             atomic_contributions = painn(
@@ -497,23 +496,34 @@ for epoch in range(args.num_epochs):
                 graph_indexes=batch.batch,
                 atomic_contributions=atomic_contributions,
             )
-            mae += F.l1_loss(preds, batch.y, reduction='sum')
+            loss_step = F.mse_loss(preds, batch.y, reduction='sum')
+            val_loss_epoch += loss_step.detach().item()
+    val_loss_epoch /= len(dm.data_val)
 
-    mae /= len(dm.data_test)
-    unit_conversion = dm.unit_conversion[args.target]
-    #print(f'Test MAE: {unit_conversion(mae):.3f}\n')
-    
-    if mae < best_mae:
-        best_mae = mae
-        patience_counter = 0 
-    else:
-        patience_counter += 1
-
-    if patience_counter >= patience:
-        print(f"Early stopping triggered after {epoch + 1} epochs.")
-        break
-    print(f"Epoch: {epoch + 1}\tTrain loss: {loss_epoch:.3e}\tTest MAE: {unit_conversion(mae):.3f}")
     with open(output_file, "a") as rf:
-        rf.write(f"Epoch: {epoch + 1}\tTrain loss: {loss_epoch:.3e}\tTest MAE: {unit_conversion(mae):.3f}\n")
+        rf.write(f"Epoch: {epoch + 1}\tTrain loss: {loss_epoch:.3e}\tVal loss: {val_loss_epoch:.3e}\n")
+
+mae = 0
+painn.eval()
+with torch.no_grad():
+    for batch in dm.test_dataloader():
+        batch = batch.to(device)
+
+        atomic_contributions = painn(
+            atoms=batch.z,
+            atom_positions=batch.pos,
+            graph_indexes=batch.batch,
+        )
+        preds = post_processing(
+            atoms=batch.z,
+            graph_indexes=batch.batch,
+            atomic_contributions=atomic_contributions,
+        )
+        mae += F.l1_loss(preds, batch.y, reduction='sum')
+
+mae /= len(dm.data_test)
+unit_conversion = dm.unit_conversion[args.target]
+print(f'Test MAE: {unit_conversion(mae):.3f}\n')
+
 
 
