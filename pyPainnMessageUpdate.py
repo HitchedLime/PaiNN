@@ -437,15 +437,12 @@ optimizer = torch.optim.AdamW(
     weight_decay=args.weight_decay,
 )
 
-# import os
-
-# output_file = "painn.txt"
-# with open(output_file, "w") as rf:
-#     rf.write(f"{device_name} Training and Evaluation Results\n")
-#     rf.write("Epoch\tTrain Loss\n")  # Header for training loss
-
-
 painn.train()
+
+best_mae = float('inf') 
+patience = 10
+patience_counter = 0 
+
 #pbar = trange(args.num_epochs)
 #for epoch in pbar:
 for epoch in range(args.num_epochs):
@@ -474,36 +471,41 @@ for epoch in range(args.num_epochs):
         loss_epoch += loss_step.detach().item()
     loss_epoch /= len(dm.data_train)
 
-    print(f"Epoch: {epoch + 1}\tTrain loss: {loss_epoch:.3e}")
-    
-    # with open(output_file, "a") as rf:
-    #     rf.write(f"{epoch + 1}\t{loss_epoch:.6e}\n")
+    #print(f"Epoch: {epoch + 1}\tTrain loss: {loss_epoch:.3e}")
 
     # pbar.set_postfix_str(f'Train loss: {loss_epoch:.3e}')
 
-mae = 0
-painn.eval()
-with torch.no_grad():
-    for batch in dm.test_dataloader():
-        batch = batch.to(device)
+    mae = 0
+    painn.eval()
+    with torch.no_grad():
+        for batch in dm.test_dataloader():
+            batch = batch.to(device)
 
-        atomic_contributions = painn(
-            atoms=batch.z,
-            atom_positions=batch.pos,
-            graph_indexes=batch.batch,
-        )
-        preds = post_processing(
-            atoms=batch.z,
-            graph_indexes=batch.batch,
-            atomic_contributions=atomic_contributions,
-        )
-        mae += F.l1_loss(preds, batch.y, reduction='sum')
+            atomic_contributions = painn(
+                atoms=batch.z,
+                atom_positions=batch.pos,
+                graph_indexes=batch.batch,
+            )
+            preds = post_processing(
+                atoms=batch.z,
+                graph_indexes=batch.batch,
+                atomic_contributions=atomic_contributions,
+            )
+            mae += F.l1_loss(preds, batch.y, reduction='sum')
 
-mae /= len(dm.data_test)
-unit_conversion = dm.unit_conversion[args.target]
-print(f'Test MAE: {unit_conversion(mae):.3f}\n')
+    mae /= len(dm.data_test)
+    unit_conversion = dm.unit_conversion[args.target]
+    #print(f'Test MAE: {unit_conversion(mae):.3f}\n')
+    print(f"Epoch: {epoch + 1}\tTrain loss: {loss_epoch:.3e}\tTest MAE: {unit_conversion(mae):.3f}")
+    
+    if mae < best_mae:
+        best_mae = mae
+        patience_counter = 0 
+    else:
+        patience_counter += 1
 
-# with open(output_file, "a") as rf:
-#     rf.write(f"\nTest MAE: {unit_conversion(mae):.3f}\n")
+    if patience_counter >= patience:
+        print(f"Early stopping triggered after {epoch + 1} epochs.")
+        break
 
-    #print(f"Epoch: {epoch + 1}\tTrain loss: {loss_epoch:.3e}\tTest MAE: {unit_conversion(mae):.3f}")
+
