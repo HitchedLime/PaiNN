@@ -502,7 +502,6 @@ for epoch in range(args.num_epochs):
     mae /= len(dm.data_test)
     unit_conversion = dm.unit_conversion[args.target]
     #print(f'Test MAE: {unit_conversion(mae):.3f}\n')
-    #print(f"Epoch: {epoch + 1}\tTrain loss: {loss_epoch:.3e}\tTest MAE: {unit_conversion(mae):.3f}")
     
     if mae < best_mae:
         best_mae = mae
@@ -513,7 +512,7 @@ for epoch in range(args.num_epochs):
     if patience_counter >= patience:
         print(f"Early stopping triggered after {epoch + 1} epochs.")
         break
-
+    print(f"Epoch: {epoch + 1}\tTrain loss: {loss_epoch:.3e}\tTest MAE: {unit_conversion(mae):.3f}")
     with open(output_file, "a") as rf:
         rf.write(f"Epoch: {epoch + 1}\tTrain loss: {loss_epoch:.3e}\tTest MAE: {unit_conversion(mae):.3f}\n")
 
