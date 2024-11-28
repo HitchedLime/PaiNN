@@ -498,7 +498,7 @@ for epoch in range(args.num_epochs):
 
     with open(output_file, "a") as rf:
         rf.write(f"Epoch: {epoch + 1}\tTrain loss: {loss_epoch:.3e}\tVal loss: {val_loss_epoch:.3e}\n")
-    print(f"Epoch: {epoch + 1}\tTrain loss: {loss_epoch:.3e}\tVal loss: {val_loss_epoch:.3e}\n")
+    print(f"Epoch: {epoch + 1}\tTrain loss: {loss_epoch:.3e}\tVal loss: {val_loss_epoch:.3e}")
 
 
 mae = 0
