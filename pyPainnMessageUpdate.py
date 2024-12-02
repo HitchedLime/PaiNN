@@ -11,6 +11,7 @@ from torch_geometric.datasets import QM9
 from torch_geometric.loader import DataLoader
 from typing import Optional, List, Union, Tuple
 from torch_geometric.transforms import BaseTransform
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 
 class GetTarget(BaseTransform):
@@ -435,6 +436,7 @@ optimizer = torch.optim.AdamW(
     lr=args.lr,
     weight_decay=args.weight_decay,
 )
+scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=5) # Learning rate decay
 
 painn.train()
 
@@ -494,11 +496,14 @@ for epoch in range(args.num_epochs):
             )
             loss_step = F.mse_loss(preds, batch.y, reduction='sum')
             val_loss_epoch += loss_step.detach().item()
+            scheduler.step(val_loss_epoch) # Learning rate decay
     val_loss_epoch /= len(dm.data_val)
 
+    my_lr = optimizer.param_groups[0]["lr"]
+
     with open(output_file, "a") as rf:
-        rf.write(f"Epoch: {epoch + 1}\tTrain loss: {loss_epoch:.3e}\tVal loss: {val_loss_epoch:.3e}\n")
-    print(f"Epoch: {epoch + 1}\tTrain loss: {loss_epoch:.3e}\tVal loss: {val_loss_epoch:.3e}")
+        rf.write(f"Epoch: {epoch + 1}\tTrain loss: {loss_epoch:.3e}\tVal loss: {val_loss_epoch:.3e}\t Learning rate: {my_lr}\n")
+    print(f"Epoch: {epoch + 1}\tTrain loss: {loss_epoch:.3e}\tVal loss: {val_loss_epoch:.3e}\t Learning rate: {my_lr}")
 
 
 mae = 0
