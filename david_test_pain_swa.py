@@ -496,7 +496,7 @@ optimizer = torch.optim.AdamW(
 )
 
 
-early_stopping = EarlyStopping(patience=2, verbose=True)
+early_stopping = EarlyStopping(patience=30, verbose=True)
 
 
 painn.train()
@@ -518,7 +518,7 @@ swa_model = AveragedModel(painn).to(device)
 swa_scheduler = SWALR(optimizer, swa_lr=1e-2)
 swa_start = int(args.num_epochs)  
 
-pbar = trange(1)
+pbar = trange(args.num_epochs)
 for epoch in pbar:
     loss_epoch = 0.
     for batch in dm.train_dataloader():
