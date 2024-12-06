@@ -591,7 +591,7 @@ if hasattr(painn, 'bn'):
     torch.optim.swa_utils.update_bn(dm.train_dataloader(), swa_model)
 
 # Convert the loss data to a DataFrame and save it to a CSV file
-loss_df = pd.DataFrame(loss_data)
+loss_df = pd.DataFrame(loss_data.cpu())
 loss_df.to_csv('epoch_losses.csv', index=False)
 
 
