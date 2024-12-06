@@ -6,13 +6,13 @@
 # "internal energy at 0K". This property (and the majority of the other QM9
 # properties) is computed as a sum of atomic contributions.
 
+import argparse
+
 # %%
 import torch
-import pandas as pd 
-import argparse
-from tqdm import trange
 import torch.nn.functional as F
 from pytorch_lightning import seed_everything
+
 print(torch.version.cuda)
 
 # %% [markdown]
@@ -26,7 +26,7 @@ from torch_geometric.datasets import QM9
 from torch_geometric.loader import DataLoader
 from typing import Optional, List, Union, Tuple
 from torch_geometric.transforms import BaseTransform
-
+from torch_geometric.nn import radius_graph
 
 class GetTarget(BaseTransform):
     def __init__(self, target: Optional[int] = None) -> None:
@@ -323,7 +323,7 @@ class Update(nn.Module):
         return d_viu, d_siu
 
 # %%
-from torch_geometric.nn import radius_graph
+
 
 class PaiNN(nn.Module):
     """
@@ -399,7 +399,7 @@ def cli(args: list = []):
     parser.add_argument('--batch_size_train', default=100, type=int)
     parser.add_argument('--batch_size_inference', default=1000, type=int)
     parser.add_argument('--num_workers', default=0, type=int)
-    parser.add_argument('--splits', nargs=3, default=[110000, 10000, 10831], type=int) # [num_train, num_val, num_test]
+    parser.add_argument('--splits', nargs=3, default=[100, 1000, 100], type=int) # [num_train, num_val, num_test]
     parser.add_argument('--subset_size', default=None, type=int)
 
     # Model
@@ -514,17 +514,17 @@ loss_data = {'epoch': [], 'train_loss': [],'val_loss':[]}
 swag = True 
 
 
-swa_model = AveragedModel(painn)
+swa_model = AveragedModel(painn).to(device)
 swa_scheduler = SWALR(optimizer, swa_lr=1e-2)
 swa_start = int(args.num_epochs)  
 
-pbar = trange(args.num_epochs)
+pbar = trange(1)
 for epoch in pbar:
     loss_epoch = 0.
     for batch in dm.train_dataloader():
         batch = batch.to(device)
 
-        atomic_contributions = painn(
+        atomic_contributions = swa_model(
             atoms=batch.z,
             atom_positions=batch.pos,
             graph_indexes=batch.batch
@@ -576,7 +576,7 @@ for epoch in pbar:
 
         mae /= len(dm.data_val)
         
-        loss_data['val_loss'].append(mae)
+        loss_data['val_loss'].append(mae.detach().item())
         early_stopping(mae, model_to_evaluate)
         if early_stopping.early_stop:
             print("Early stopping triggered")
@@ -591,7 +591,7 @@ if hasattr(painn, 'bn'):
     torch.optim.swa_utils.update_bn(dm.train_dataloader(), swa_model)
 
 # Convert the loss data to a DataFrame and save it to a CSV file
-loss_df = pd.DataFrame(loss_data.cpu())
+loss_df = pd.DataFrame(loss_data)
 loss_df.to_csv('epoch_losses.csv', index=False)
 
 
